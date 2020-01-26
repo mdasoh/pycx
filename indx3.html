@@ -1,0 +1,808 @@
+<html>
+    <head>
+        <title>web terminal</title>
+        <link rel="stylesheet" type="text/css" href="wc.css" />
+        <script type="text/javascript" language="javascript">
+        function keyUpEvent(event)
+        {
+	    //alert( event.keyCode );
+	    if( event.keyCode == 9 )
+	    {
+	       alert( "refocusing" );
+	   //document.main.user.focus(); // no
+	   //document.getElementById('command').focus(); // no
+	    }
+	}
+	function ackCursor(text)
+	{
+           var cursor = global.getAttribute('cursor');
+	   if( cursor == 1 ) return 1;
+	   var sis = global.getAttribute('ypos');
+	   var text = document.getElementById(sis);
+	   var xpos = Number( text.getAttribute('xpos') );
+	   var llength = Number( text.getAttribute('len') );
+           var part1 = text.firstChild.nodeValue.substring(0,xpos);
+	   //if( xpos == llength ) alert( "equivs" );
+           var part2 = text.firstChild.nodeValue.substring(xpos,llength);
+	   //alert( text.firstChild.nodeValue );
+	   text.firstChild.nodeValue = part1 + '_' + part2;
+           global.setAttribute('cursor',1);
+	   //alert( "ack" );
+	   return 0;
+	}
+	function nakCursor(text)
+	{
+           var cursor = global.getAttribute('cursor');
+	   if( cursor == 0 ) return 0;
+	   var sis = global.getAttribute('ypos');
+	   var text = document.getElementById(sis);
+	   var xpos = Number( text.getAttribute('xpos') );
+	   var llength = Number( text.getAttribute('len') );
+	   var part = text.firstChild.nodeValue;
+           var partb = part.slice(xpos+1,llength+1); // trouble here
+           var parta = part.substring(0,xpos);
+	   text.firstChild.nodeValue = parta + partb;
+           global.setAttribute('cursor',0);
+	   return 1;
+	}
+	function createsubcx(posy)
+	{
+           //nakCursor();
+	   var ypos = posy; //global.getAttribute('ypos');
+	   var text = document.getElementById(ypos);
+	   if( text.parentNode.firstChild == text )
+	   {
+	      //global.setAttribute('ypos','0.'+ypos);
+	      alert( 'already here' )
+	      return;
+	   }
+	   var llength = text.getAttribute('len');
+	   var l0 = text.parentNode;
+	   var ntop = document.createElement('div');
+	   ntop.id = 'x';
+	   ntop.setAttribute('class','wc-div');
+
+	   var subst = document.createElement('div');
+	   subst.setAttribute('id',text.id);
+	   subst.setAttribute('class','wc-topline');
+	   var rnode = text.childNodes[0];
+	   line = document.createTextNode(rnode.nodeValue);
+	   subst.setAttribute('len',llength);
+	   subst.setAttribute('xpos',llength-1);
+	   subst.appendChild(line);
+	   ntop.appendChild(subst);
+
+	   var wrap = document.createElement('div');
+	   wrap.setAttribute('id','0.'+text.id);
+	   wrap.setAttribute('class','wc-line');
+	   wrap.setAttribute('len',0);
+	   wrap.setAttribute('xpos',0);
+	   line = document.createTextNode('');
+	   wrap.appendChild(line);
+	   ntop.appendChild(wrap);
+	   ntop.setAttribute('lines',1);
+	   //letter.value = '';
+
+	   l0.replaceChild(ntop,text);
+	   global.setAttribute('ypos','0.'+ypos);
+	   return 1;
+	}
+	function createline(posy,newtext)
+	{
+	    var ypos = posy;
+	    var text = document.getElementById(ypos);
+	    if( text.parentNode.firstChild == text )
+	    {
+	    	alert( "black line" );
+		return ypos;
+	    }
+	    var lim = 80;
+	    var subcx = '';
+	    if( ypos.indexOf('.',0) != -1 ) // name this line
+	    {
+		lim = ypos.indexOf('.',0);
+		subcx = ypos.substring(lim,80);
+	    }
+	    var nline = Number(ypos.substring(0,lim));
+	    var lines = text.parentNode.getAttribute('lines');
+	    var it = lines - 1;
+	    while( it > nline )
+	    {
+		var here = document.getElementById(String(it)+subcx);
+		var xline = it + 1;
+		here.setAttribute('id',String(xline)+subcx);
+		--it;
+	    }
+	    ++nline;
+	    //alert( nline );
+	    var wrap = document.createElement('div');
+	    wrap.setAttribute('id',String(nline)+subcx);
+	    wrap.setAttribute('class','wc-line');
+	    wrap.setAttribute('len',newtext.length);
+	    wrap.setAttribute('xpos',newtext.length);
+	    line = document.createTextNode(newtext); //''
+	    wrap.appendChild(line);
+	    text.parentNode.insertBefore(wrap,text.nextSibling);
+	    text.parentNode.setAttribute('lines',++lines);
+	    global.setAttribute('ypos',String(nline)+subcx);
+	    return String(nline)+subcx;
+	}
+	function linetext(posy,newtext)
+	{
+	    var ypos = posy;
+	    var text = document.getElementById(ypos);
+	    var llength = Number(text.getAttribute('len'));
+	    if( llength == 80 ) return; // yes, the lines can be too long.  (want word wrap?)
+	    //ackCursor();
+	    var l0 = text.parentNode;
+	    var wrap = document.createElement('div');
+	    wrap.setAttribute('id',ypos);
+	    var oclass = text.getAttribute('class');
+	    wrap.setAttribute('class',oclass);
+	    var rnode = text.childNodes[0];
+	    var xpos = Number(text.getAttribute('xpos'));
+	    llength = llength + newtext.length;
+	    line = document.createTextNode(rnode.nodeValue);// + String(xpos));
+	    var part1 = line.nodeValue.substring(0,xpos);
+	    var part2 = line.nodeValue.substring(xpos+newtext.length,llength);//+1
+	    line.nodeValue = part1 + newtext + part2;
+	    wrap.setAttribute('len',llength);
+	    wrap.setAttribute('xpos',++xpos);
+	    wrap.appendChild(line);
+	    l0.replaceChild(wrap,text);
+	}
+        function keyEvent(event)
+        {
+	    //alert( 'keyevent' ); // still loading??
+	    var global = document.getElementById('global');
+	    var letter = document.getElementById('command');
+	    letter.value = String.fromCharCode(event.keyCode);
+            switch(event.keyCode){
+		case 0x20: // ' '
+		    letter.value = '\u00A0';//A8';
+		//case 0xBD: // '-', '_'
+		//    letter.value = '\u005C';
+		case 0x30: case 0x31: case 0x32: case 0x33: case 0x34:
+		case 0x35: case 0x36: case 0x37: case 0x38: case 0x39:
+
+		case 0x41: case 0x42: case 0x43: case 0x44: case 0x45:
+		case 0x46: case 0x47: case 0x48: case 0x49: case 0x4A:
+		case 0x4B: case 0x4C: case 0x4D: case 0x4E: case 0x4F:
+		case 0x50: case 0x51: case 0x52: case 0x53: case 0x54:
+		case 0x55: case 0x56: case 0x57: case 0x58: case 0x59:
+		case 0x5A: // 'A'...'Z'
+		case 0x61: case 0x62: case 0x63: case 0x64: case 0x65:
+		case 0x66: case 0x67: case 0x68: case 0x69: case 0x6A:
+		case 0x6B: case 0x6C: case 0x6D: case 0x6E: case 0x6F:
+		case 0x70: case 0x71: case 0x72: case 0x73: case 0x74:
+		case 0x75: case 0x76: case 0x77: case 0x78: case 0x79:
+		case 0x7A: // 'a'...'z'
+		    if(event.keyCode != 0x20)
+		    {
+		      {
+			if((event.keyCode > 0x60 && event.keycode <= 0x7A)
+			||(event.keyCode > 0x40 && event.keyCode <= 0x5A))
+			{
+			  if(event.keyCode > 0x60)
+			  {
+			    letter.value = String.fromCharCode(event.keyCode-0x20);
+			  }
+			  var cap = event.getModifierState( "CapsLock" );
+			  //alert( cap );
+			  if(!event.shiftKey) // we were overriding caps and just using shifts
+			  {
+			     cap = !cap;
+			  }
+			  if( cap )
+			    letter.value = String.fromCharCode(event.keyCode+0x20);
+			}
+		    	else if(event.keyCode >= 0x30 && event.keyCode < 0x40)
+		        {if(event.keyCode < 0x40)
+		        {
+		          letter.value = String.fromCharCode(event.keyCode);
+		        }
+		        }
+			//else letter.value = String.fromCharCode(event.keyCode+0x20);
+		      }
+		    }
+		    var ypos = global.getAttribute('ypos');
+		    var text = document.getElementById(ypos);
+		    var llength = Number(text.getAttribute('len'));
+		    if( llength == 80 ) break; // yes, the lines can be too long.  (want word wrap?)
+		    ackCursor();
+		    var l0 = text.parentNode;
+		    var wrap = document.createElement('div');
+		    wrap.setAttribute('id',ypos);
+		    var oclass = text.getAttribute('class');
+		    wrap.setAttribute('class',oclass);
+		    var rnode = text.childNodes[0];
+		    var xpos = Number(text.getAttribute('xpos'));
+		    //line = document.createTextNode(rnode.nodeValue + letter.value);
+		    ++llength;
+		    //line = document.createTextNode(rnode.nodeValue.substring(0,xpos) + letter.value + rnode.nodeValue.substring(xpos,llength));// + String(xpos));
+		    line = document.createTextNode(rnode.nodeValue);// + String(xpos));
+		//xpos=Number(text.getAttribute('xpos'));
+		var part1 = line.nodeValue.substring(0,xpos);
+		var part2 = line.nodeValue.substring(xpos+1,llength);//+1
+		line.nodeValue = part1 + letter.value + '_' + part2;
+		    wrap.setAttribute('len',llength);
+		    wrap.setAttribute('xpos',++xpos);
+		    wrap.appendChild(line);
+		    l0.replaceChild(wrap,text);
+		    letter.value = '';
+		    break;
+		case 0xBD: // '-', '_'
+		case 0xAD:
+	            //if( nakCursor() == 1 );// break;
+   var ypos = String(0);
+   var hereypos = global.getAttribute('ypos');
+   var nline = 0;
+   var subcx = '.0';
+   var xmlhttp2;
+   var herestop = document.getElementById(hereypos);
+   var heretext = herestop.innerHTML;
+   var usedtext = '';
+   while( true )
+   {
+      var text = document.getElementById(ypos);//.innerHTML;
+      var sis = null;
+      if( text != null )
+         sis = text.getAttribute('class');
+      if( sis == 'wc-topline') // any black line matches
+      {
+         subcx = '.'+ypos;
+         lim = ypos.indexOf('.',0);
+         nline = 0; // delve
+      }
+      else // any blue line matches
+      {
+         var lim = ypos.indexOf('.',0);
+         if( lim != -1 ) // exists within context
+         {
+	    newcx = ypos.substring(lim+1,80);
+	    var lim2 = newcx.indexOf('.',0) // second dot
+	    if( lim2 != -1 )
+	    {
+	       subcx = newcx.substring(lim2,80); //ypos.substring(lim,80);
+	       nline = Number(newcx.substring(0,lim)); //Number(ypos.substring(0,lim)); // advance
+	    }
+	    else
+	    {
+	       nline = Number(newcx); // use the second number //Number(ypos); advance
+	       subcx = '';
+	    }
+         }
+         else // no up-context
+         {
+	    subcx = '';
+	    nline = Number(ypos); // used the first number(s)
+	    //break; // specious...
+         }
+         ++nline;
+      }
+      if( text == null )
+      {
+         ypos = String(nline)+subcx; // should be next line
+         var lim = ypos.indexOf('.',0);
+         var next = document.getElementById(ypos); // have we run off the end?
+	 if( ( lim == -1 ) && ( next == null ) ) break; // this is the only way out, back off all context, and run off the end
+         continue;
+      } // text != null
+      var thistext = '';
+      if( ypos == hereypos )
+      {
+         thistext = heretext;
+         var lennewtext = thistext.length;
+         var newtext = thistext.substr( 0, lennewtext - 1 );
+         //alert( "ypos" + ypos );
+         if( newtext == '' )
+            break;
+         //alert( "newtext: " + newtext );
+         //var xurl = "http://127.0.0.1:10000/" + newtext + ".528N.400E.provo.utah.us";
+         var xurl = "http://127.0.0.1:10000/" + newtext + ".400E.provo.utah.us";
+         var xmlhttp2;
+         if (window.XMLHttpRequest)
+            xmlhttp2 = new XMLHttpRequest();
+         else alert('XMLHttpRequest');
+         xmlhttp2.open( "GET", xurl, false ); // sync
+         xmlhttp2.send();
+      //alert( 'hi' );
+      //fix: also update line length
+      //usedtext = usedtext + thistext + "q" + xmlhttp2.responseText;
+         //jun usedtext += "q" + xmlhttp2.responseText;
+         usedtext += xmlhttp2.responseText;
+         var sis = usedtext.split( '\n' );
+         var counter = 0;
+         if( sis.length <= 3 )
+         {
+            //alert( sis[ 5 ] ); // line contents
+            document.getElementById(hereypos).innerHTML=sis[ 1 ];
+         }
+         else
+         {
+            document.getElementById(hereypos).innerHTML=sis[ counter + 1 ];
+	    document.getElementById(hereypos).setAttribute('len',sis[ counter + 1 ].length);
+	    document.getElementById(hereypos).setAttribute('xpos',sis[ counter + 1 ].length-1);
+            createsubcx( ypos )
+            ypos = global.getAttribute('ypos');
+            counter = counter + 1;
+            linetext(ypos,sis[ counter * 2 + 1 ]);
+            ypos = global.getAttribute('ypos');
+            counter = counter + 1;
+            while( counter * 2 < sis.length - 1 )
+            {
+               //document.getElementById(hereypos).innerHTML=sis[ counter / 2 ];
+               //alert( ypos );
+               ypos = createline(ypos,sis[ counter * 2 + 1 ]);
+               //alert( ypos );
+               counter = counter + 1;
+            //alert( sis.length );
+            //alert( usedtext ); // not registering?
+            }
+         }
+//         alert( sis );
+      }
+      else // all the other lines here.
+      {
+      	 //alert( ypos );
+	 //alert( text.innerHTML );
+         thistext = text.innerHTML;
+      }
+
+      ypos = String( nline ) + subcx;
+      //break;
+      continue;
+   }
+   letter.value = '';
+		    break;
+		case 61: // =/+
+   {
+		   var ypos = global.getAttribute('ypos');
+		   var text = document.getElementById(ypos);
+		   var llength = Number( text.getAttribute('len') );
+		   if( llength != 0 ) break;
+   //document.getElementById(ypos)
+   text.innerHTML=ypos;
+   text.setAttribute('len',1);
+   text.setAttribute('xpos',0);
+   letter.value = '';
+   }
+		   break;
+		//case 0x08:
+		case 0x08: // BS
+		{
+		    var ypos = global.getAttribute('ypos');
+		    var text = document.getElementById(ypos);
+		    var l0 = text.parentNode;
+
+		    var llength = text.getAttribute('len');
+		    if( llength == 0 )
+		    {
+			var newcx = '';
+			var subcx = '';
+			var lim = 80;
+			var condbs = 0;
+			if( ( l0.firstChild == text ) || ( l0.childNodes[1] == text ) ) // tip: spell childNodes right
+			{
+			   condbs = 1;
+			    if(!event.ctrlKey) break; // make sure we know what we're deleting
+			}
+			if( ypos.indexOf('.',0) != -1 )
+			{
+			    lim = ypos.indexOf('.',0);
+			    newcx = ypos.substring(lim+1,80);
+			    subcx = ypos.substring(lim,80);
+			    global.setAttribute('ypos',newcx);
+			}
+			else
+			{
+			    var nline = Number(ypos);
+			    if( nline == 0 ) break;
+			    --nline;
+			    global.setAttribute('ypos',String(nline));
+			}
+			var nlines = l0.getAttribute('lines');
+			var nline = Number(ypos.substring(0,lim)); // how is this a number?
+			if( l0.firstChild == text )
+			{
+			    //if(!event.ctrlKey) break; // make sure we know what we're deleting
+
+			    var div0 = l0.parentNode;
+			    nlines = div0.getAttribute('lines');
+			    nline = Number(ypos.substring(0,lim));
+			    lim = newcx.indexOf('.',0);
+			    subcx = newcx.substring(lim,80);
+			    var it = nline;
+			    while( it < nlines - 1 )
+			    {
+				var here = document.getElementById(String(it+1)+subcx);
+				here.setAttribute('id',String(it)+subcx);
+				++it;
+			    }
+			    div0.setAttribute('lines',nlines-1); // wontfix: to instead try counting the lines to subtract.  those are all included.
+			    //	alert( "topline" );
+			    //div0.setAttribute('class','wc-line');
+			    //div0.innerHTML = '';
+
+			    div0.removeChild(l0); // this deletes at least two lines.
+   if( div0.getAttribute('lines') == 0 )
+   { // if: this node no longer has children
+	            var div00 = div0.parentNode;
+		    var llength = div0.childNodes[0].getAttribute('len');
+		    //alert( llength );
+		    var oypos = div0.childNodes[0].getAttribute('id');
+		    var wrap = document.createElement('div');
+		    //alert( oypos ); // fixed: was x
+		    wrap.setAttribute('id',oypos);//old ypos?
+		    wrap.setAttribute('class','wc-line');
+		    var rnode = div0.firstChild.childNodes[0]; // was: null
+		    line = document.createTextNode(rnode.nodeValue);
+		    //line = document.createTextNode(div0.firstChild.childNodes[0].nodeValue);
+		    wrap.setAttribute('len',llength);
+		    var xpos = div0.childNodes[0].getAttribute('xpos');
+		    wrap.setAttribute('xpos',xpos);
+		    wrap.appendChild(line);
+		    div00.replaceChild(wrap,div0);
+   }
+
+			    break;
+			}
+			else if( nline > 0 )
+			{
+			    var it = nline;
+
+			    while( it < nlines - 1)
+			    {
+				var here = document.getElementById(String(it+1)+subcx);
+				here.setAttribute('id',String(it)+subcx);
+				++it;
+			    }
+			    l0.setAttribute('lines',nlines-1);
+			    l0.removeChild(text);
+			}
+			else
+			{
+			    var div0 = l0.parentNode;
+			    var nlines = div0.getAttribute('lines');
+			    var wrap = document.createElement('div');
+			    wrap.setAttribute('id',newcx);
+			    wrap.setAttribute('class','wc-line');
+			    var otext = l0.firstChild.childNodes[0].nodeValue;
+			    line = document.createTextNode(otext);
+			    var olen = l0.firstChild.getAttribute('len');
+			    wrap.setAttribute('len',olen);
+			    var xpos = l0.firstChild.getAttribute('xpos');
+			    wrap.setAttribute('xpos',xpos);
+			    wrap.appendChild(line);
+			    div0.replaceChild(wrap,l0);
+			}
+			break;
+		    }
+		if(ackCursor()==0) break;
+		    var wrap = document.createElement('div');
+		    wrap.setAttribute('id',ypos);
+		    var oclass = text.getAttribute('class');
+		    wrap.setAttribute('class',oclass);
+		    var rnode = text.childNodes[0];
+		    line = document.createTextNode(rnode.nodeValue);//.substring(0,--llength));
+		xpos=Number(text.getAttribute('xpos'));
+		var part1 = line.nodeValue.substring(0,xpos-1);
+		var part2 = line.nodeValue.substring(xpos+1,llength+1);//+1
+		line.nodeValue = part1 + '_' + part2;
+		if( --llength >= 0 )
+		   wrap.setAttribute('len',llength);
+		//    var xpos = text.getAttribute('xpos');
+		if( --xpos >= 0 )
+		   wrap.setAttribute('xpos',xpos);
+		    wrap.appendChild(line);
+		    l0.replaceChild(wrap,text);
+		    letter.value = '';
+		    break;
+		}
+                case 13: // CR
+	            if( nakCursor() == 1 );// break;
+		    var ypos = global.getAttribute('ypos');
+		    var text = document.getElementById(ypos);
+		    if( text.parentNode.firstChild == text )
+		    {
+			break;
+		    }
+		    var lim = 80;
+		    var subcx = '';
+		    if( ypos.indexOf('.',0) != -1 ) // name this line
+		    {
+			lim = ypos.indexOf('.',0);
+			subcx = ypos.substring(lim,80);
+		    }
+		    var nline = Number(ypos.substring(0,lim));
+		    var lines = text.parentNode.getAttribute('lines');
+		    var it = lines - 1;
+		    while( it > nline )
+		    {
+			var here = document.getElementById(String(it)+subcx);
+			var xline = it + 1;
+			here.setAttribute('id',String(xline)+subcx);
+			--it;
+		    }
+		    ++nline;
+		    var wrap = document.createElement('div');
+		    wrap.setAttribute('id',String(nline)+subcx);
+		    wrap.setAttribute('class','wc-line');
+		    wrap.setAttribute('len',0);
+		    wrap.setAttribute('xpos',0);
+		    line = document.createTextNode('');
+		    wrap.appendChild(line);
+		    text.parentNode.insertBefore(wrap,text.nextSibling);
+		    text.parentNode.setAttribute('lines',++lines);
+		    global.setAttribute('ypos',String(nline)+subcx);
+		    letter.value = '';
+		    break;
+		case 37: // left arrow
+		    if(!event.ctrlKey)
+	      	    {
+			var ypos = global.getAttribute('ypos');
+			var text = document.getElementById(ypos);
+			var xpos = text.getAttribute('xpos');
+			if( --xpos >= 0 )
+ 			{
+		            if( ackCursor() == 0 ) break;
+			    //alert( xpos );
+			    nakCursor();
+			    text.setAttribute('xpos',xpos);
+			    ackCursor();
+			    break;
+			}
+			alert( "no-break" );
+		    }
+		    //else alert( "ctrl" );
+		    nakCursor();
+		    var ypos = global.getAttribute('ypos');
+		    //alert( ypos );
+		    if( ypos.indexOf('.',0) != -1 )
+		    {
+			var lim = ypos.indexOf('.',0);
+			var newcx = ypos.substring(lim+1,80);
+			//alert(newcx);
+			global.setAttribute('ypos',newcx);
+		    }
+		    letter.value = '';
+		    break;
+	      	//case 39: // right arrow
+		case 39: // right arrow
+
+		    if(!event.ctrlKey)
+	      	    {
+			var ypos = global.getAttribute('ypos');
+			var text = document.getElementById(ypos);
+			var llen = text.getAttribute('len');
+			var xpos = text.getAttribute('xpos');
+			if( ++xpos <= llen )
+			{
+		            if( ackCursor() == 0 ) break;
+			    nakCursor();
+			    text.setAttribute('xpos',xpos);
+			    ackCursor();
+			    break;
+			}
+			//else
+			if(!event.shiftKey)
+			{
+			   ackCursor();
+			   break; // really create a context?
+			}
+		    }
+	            nakCursor();
+		    var ypos = global.getAttribute('ypos');
+		    var text = document.getElementById(ypos);
+		    if( text.parentNode.firstChild == text )
+		    {
+			global.setAttribute('ypos','0.'+ypos);
+			break;
+		    }
+		    var llength = text.getAttribute('len');
+		    var l0 = text.parentNode;
+		    var ntop = document.createElement('div');
+		    ntop.id = 'x';
+		    ntop.setAttribute('class','wc-div');
+
+		    var subst = document.createElement('div');
+		    subst.setAttribute('id',text.id);
+		    subst.setAttribute('class','wc-topline');
+		    var rnode = text.childNodes[0];
+		    line = document.createTextNode(rnode.nodeValue);
+		    subst.setAttribute('len',llength);
+		    subst.setAttribute('xpos',llength);
+		    subst.appendChild(line);
+		    ntop.appendChild(subst);
+
+		    var wrap = document.createElement('div');
+		    wrap.setAttribute('id','0.'+text.id);
+		    wrap.setAttribute('class','wc-line');
+		    wrap.setAttribute('len',0);
+		    wrap.setAttribute('xpos',0);
+		    line = document.createTextNode('');
+		    wrap.appendChild(line);
+		    ntop.appendChild(wrap);
+		    ntop.setAttribute('lines',1);
+		    letter.value = '';
+
+		    l0.replaceChild(ntop,text);
+
+		    break;
+		case 38: // up arrow
+		   nakCursor();
+		    var ypos = global.getAttribute('ypos');
+		    var lim = 80;
+		    var subcx = '';
+		    if( ypos.indexOf('.',0) != -1 )
+		    {
+			lim = ypos.indexOf('.',0);
+			subcx = ypos.substring(lim,80);
+		    }
+		    var nline = Number(ypos.substring(0,lim));
+		    if( nline == 0 ) break;
+		    --nline;
+		    global.setAttribute('ypos',String(nline)+subcx);
+		    //alert( nline + subcx );
+		    letter.value = '';
+		    break;
+		case 40: // adown arrow
+		   nakCursor();
+		    var ypos = global.getAttribute('ypos');
+		    var _here = document.getElementById(ypos);
+		    var text = _here.parentNode;
+		    var lines = 0;
+		    //if( text.parentNode.firstChild == text ) // breaks on top line
+		    if( _here.getAttribute('class')=='wc-topline')
+		    {
+			lines = text.parentNode.getAttribute('lines');
+		    }
+		    else lines = text.getAttribute('lines');
+		    var lim = 80;
+		    var subcx = '';
+		    if( ypos.indexOf('.',0) != -1 )
+		    {
+			lim = ypos.indexOf('.',0);
+			subcx = ypos.substring(lim,80);
+		    }
+		    var nline = Number(ypos.substring(0,lim));
+		    ++nline;
+		    if( nline == lines ) break;
+		    global.setAttribute('ypos',String(nline)+subcx);
+		    letter.value = '';
+		    break;
+		case 36: // home
+		    nakCursor();
+		    var ypos = global.getAttribute('ypos');
+		    var text = document.getElementById(ypos);
+		    var xpos = 0;
+		    text.setAttribute('xpos',xpos);
+		    ackCursor();
+		    break;
+		case 35: // end
+		    nakCursor();
+		    var ypos = global.getAttribute('ypos');
+		    var text = document.getElementById(ypos);
+		    var xpos = text.getAttribute('len');
+		    text.setAttribute('xpos',xpos);
+		    ackCursor();
+		    break;
+		case 18: // values to ignore.  (which ones?)
+		case 0x11:
+		case 0x10:
+		    letter.value = '';
+		    break;
+		case 0x09: // HT
+		    setTimeout('document.main.user.focus()',0);
+
+		    var ypos = global.getAttribute('ypos');
+		    var text = document.getElementById(ypos);
+		    var llength = text.getAttribute('len');
+		    if( llength == 80 ) break;
+		    var l0 = text.parentNode;
+
+		    var wrap = document.createElement('div');
+		    wrap.setAttribute('id',ypos);
+		    var oclass = text.getAttribute('class');
+		    wrap.setAttribute('class',oclass);
+		    var rnode = text.childNodes[0];
+
+		    var tablen = 8 - (llength % 8);
+		    var tabws = '';
+		    while( tablen > 0 )
+		    {
+		        tabws += '\u00B4';
+			++llength;
+			--tablen;
+		    }
+		    line = document.createTextNode(rnode.nodeValue + tabws);
+
+		    wrap.setAttribute('len',llength);
+		    wrap.setAttribute('xpos',llength);
+		    wrap.appendChild(line);
+		    l0.replaceChild(wrap,text);
+		    letter.value = '';
+		    // how can we bring back focus?
+		    //alert( "focus lost" );
+	   //document.main.user.focus(); // no
+	   document.getElementById('command').focus(); // no
+
+		    break;
+		case 45: // ins
+                   if( ackCursor() == 0 ) break;
+		    var ypos = global.getAttribute('ypos');
+		    var text = document.getElementById(ypos);
+		    var llength = Number( text.getAttribute('len') );
+		    if( ( llength + 1 ) > 80 ) break;
+		xpos=Number(text.getAttribute('xpos'));
+		var part = text.firstChild.nodeValue;
+		text.firstChild.nodeValue = '\u00A0' + part; // same used as space (top of switch)
+		text.setAttribute( 'len', llength + 1 );
+		text.setAttribute( 'xpos', xpos + 1 );
+		   break;
+                default: // some symbols are part of HTML and can't be processed
+		    letter.value = event.keyCode;
+		    var sval = String( letter.value );
+		    //letter.value = 'f'; // bring the above back when more interested in keycodes as relevant.
+
+
+                if( ackCursor() == 0 ) break;
+		    var ypos = global.getAttribute('ypos');
+		    var text = document.getElementById(ypos);
+		    var llength = Number( text.getAttribute('len') );
+		    if( ( llength + sval.length ) > 80 ) break;
+		    var l0 = text.parentNode;
+		//    var wrap = document.createElement('div');
+		xpos=Number(text.getAttribute('xpos'));
+		var part1 = text.firstChild.nodeValue.substring(0,xpos);
+		var part2 = text.firstChild.nodeValue.substring(xpos+1,llength+1);
+		text.firstChild.nodeValue = part1 + letter.value + '_' + part2;
+		//    wrap.setAttribute('id',ypos);
+		//    var oclass = text.getAttribute('class');
+		//    wrap.setAttribute('class',oclass);
+		//    var rnode = text.childNodes[0];
+		//    line = document.createTextNode(rnode.nodeValue + letter.value);
+		llength += sval.length;
+		//    wrap.setAttribute('len',llength);
+		text.setAttribute('len',llength);
+		//    var xpos = text.getAttribute('xpos')+1;
+		//    wrap.setAttribute('xpos',xpos);
+		text.setAttribute('xpos',xpos+sval.length);
+		//    wrap.appendChild(line);
+		//    l0.replaceChild(wrap,text);
+		    letter.value = '';
+                    break;
+            }
+	    setTimeout("document.getElementById('command').value = ''",0);
+	}
+        //var commands_history = new Array();
+        //var history_pointer;
+	function reloaded()
+	{
+	   document.getElementById('0').firstChild.nodeValue = '';
+	   document.main.user.focus();
+	   document.getElementById('0').setAttribute('xpos',0);
+	   document.getElementById('0').setAttribute('len',0);
+	   //alert( 'reload' ); // still loading
+	   return;
+	}
+        </script>
+
+    </head>
+<body OnLoad="reloaded();">
+
+<div id="global" ypos="0" lines=1 cursor=0>
+    <div class="wc-line" id="0" xpos=1 len=1>_</div>
+    <form name="main" onsubmit="return false;">
+	<input name=user
+	    onkeydown="keyEvent(event);"
+	    onkeyup="keyUpEvent(event);"
+	    class="wc-command"
+	    id="command"
+	    type="text" />
+    </form>
+</div>
+
+<!-- <div id="nine">_</div><br> -->
+
+</body></html>
