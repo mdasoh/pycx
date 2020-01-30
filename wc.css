@@ -1,0 +1,61 @@
+.wc-results {
+    overflow: auto; 
+    margin: 0px; 
+    padding: 5px; 
+    font-family: monospace; 
+    color: white; 
+    background-color: black; 
+    height: 68px;
+}
+.wc-div {
+    overflow: auto; 
+    margin: 0px; 
+    padding: 0px; 
+    font-family: monospace; 
+    color: white; 
+    background-color: black; 
+}
+.wc-topline {
+    overflow: auto; 
+    margin: 0px; 
+    padding: 0px; 
+    font-family: monospace; 
+    font-size: 11; 
+    font-weight: bold; 
+    color: white; 
+    background-color: black; 
+    height: 17px;
+}
+.wc-line {
+    overflow: auto; 
+    margin: 0px; 
+    padding: 0px; 
+    font-family: monospace; 
+    font-size: 11; 
+    font-weight: bold; 
+    color: yellow; 
+    background-color: darkblue; 
+    height: 17px;
+}
+.wc-results pre {
+    display: inline;
+}
+.wc-command_ {
+    margin: 0px; 
+    font-family: monospace; 
+    font-size: 11; 
+    font-weight: bold; 
+    color: white; 
+    background-color: black; 
+    width: 100%;
+}
+.wc-command {
+    margin: 0px; 
+    font-family: monospace; 
+    font-size: 11; 
+    font-weight: bold; 
+    color: white; 
+    background-color: black; 
+    height: 0px;
+    width: 100%;
+}
